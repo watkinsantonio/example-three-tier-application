@@ -18,6 +18,9 @@ export default async function Home() {
             <Link href="/calculator" className="text-sm text-zinc-600 dark:text-zinc-400 hover:underline">
               Calculator
             </Link>
+            <Link href="/checkers" className="text-sm text-zinc-600 dark:text-zinc-400 hover:underline">
+              Checkers
+            </Link>
           </nav>
         </div>
 
