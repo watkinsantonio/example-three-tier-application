@@ -11,9 +11,14 @@ export default async function Home() {
           <h1 className="text-3xl font-bold text-zinc-900 dark:text-zinc-50">
             To-Do List
           </h1>
-          <Link href="/calculator" className="text-sm text-zinc-600 dark:text-zinc-400 hover:underline">
-            Calculator
-          </Link>
+          <nav className="flex gap-4">
+            <Link href="/calendar" className="text-sm text-zinc-600 dark:text-zinc-400 hover:underline">
+              Calendar
+            </Link>
+            <Link href="/calculator" className="text-sm text-zinc-600 dark:text-zinc-400 hover:underline">
+              Calculator
+            </Link>
+          </nav>
         </div>
 
         {/* Add task form */}
@@ -23,7 +28,13 @@ export default async function Home() {
             type="text"
             required
             placeholder="Add a new task..."
-            className="flex-1 rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 px-4 py-2 text-zinc-900 dark:text-zinc-50 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-500"
+            className="flex-1 min-w-0 rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 px-4 py-2 text-zinc-900 dark:text-zinc-50 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-500"
+          />
+          <input
+            name="due_date"
+            type="date"
+            aria-label="Due date (optional)"
+            className="rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 px-2 py-2 text-sm text-zinc-900 dark:text-zinc-50 focus:outline-none focus:ring-2 focus:ring-zinc-500"
           />
           <button
             type="submit"
@@ -74,6 +85,15 @@ export default async function Home() {
               >
                 {task.title}
               </span>
+              {task.due_date && (
+                <Link
+                  href={`/calendar?year=${task.due_date.slice(0, 4)}&month=${Number(task.due_date.slice(5, 7))}`}
+                  className="text-xs text-zinc-500 dark:text-zinc-400 hover:underline whitespace-nowrap"
+                  title="View on calendar"
+                >
+                  Due {task.due_date}
+                </Link>
+              )}
             </li>
           ))}
         </ul>
