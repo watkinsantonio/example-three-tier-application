@@ -63,8 +63,13 @@ The API is not exposed directly, but you can reach it through the web container 
 |--------|------|-------------|
 | GET | `/health` | Health check |
 | GET | `/tasks` | List all tasks |
-| POST | `/tasks` | Create a task (`{ "title": "..." }`) |
-| PATCH | `/tasks/:id` | Update a task (`{ "completed": true }` or `{ "title": "..." }`) |
+| POST | `/tasks` | Create a task (`{ "title": "...", "due_date": "YYYY-MM-DD" }`; `due_date` optional) |
+| PATCH | `/tasks/:id` | Update a task (`{ "completed": true }`, `{ "title": "..." }`, or `{ "due_date": "YYYY-MM-DD" \| null }`) |
+| GET | `/calendar/:year/:month` | Tasks due in the given month (`month` 1–12), ordered by due date; 400 on invalid year/month |
+
+API tests (no database required — the pool is stubbed) run with `cd src/api && npm test`.
+
+The web app has a monthly calendar view at [http://localhost:3000/calendar](http://localhost:3000/calendar) (`?year=2025&month=6` selects a month).
 
 ## Project structure
 
