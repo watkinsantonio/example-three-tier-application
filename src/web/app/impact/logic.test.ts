@@ -1,0 +1,101 @@
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { allocate, coverage, formatKg, parseKg, parseRegions } from './logic.ts';
+
+test('parseKg accepts non-negative numbers, including form strings', () => {
+  assert.deepEqual(parseKg('250'), { value: 250 });
+  assert.deepEqual(parseKg('0'), { value: 0 });
+  assert.deepEqual(parseKg(12.5), { value: 12.5 });
+  assert.ok('error' in parseKg('-1'));
+  assert.ok('error' in parseKg('abc'));
+  assert.ok('error' in parseKg(''));
+  assert.ok('error' in parseKg(Infinity));
+});
+
+test('parseRegions reads "Name, kg" lines and ignores blank lines', () => {
+  assert.deepEqual(parseRegions('North, 100\n\n  South ,  50.5 \r\n'), {
+    regions: [
+      { name: 'North', needKg: 100 },
+      { name: 'South', needKg: 50.5 },
+    ],
+  });
+});
+
+test('parseRegions uses the last comma so names may contain commas', () => {
+  assert.deepEqual(parseRegions('Valley, upper, 30'), {
+    regions: [{ name: 'Valley, upper', needKg: 30 }],
+  });
+});
+
+test('parseRegions rejects malformed input with a line number', () => {
+  assert.ok('error' in parseRegions(''));
+  assert.ok('error' in parseRegions('no comma here'));
+  assert.ok('error' in parseRegions(', 40'));
+  assert.ok('error' in parseRegions('North, -5'));
+  const bad = parseRegions('North, 10\nSouth, nope');
+  assert.ok('error' in bad);
+  assert.match(bad.error, /^Line 2:/);
+});
+
+test('allocate covers everyone when supply exceeds total need', () => {
+  const result = allocate(1000, [
+    { name: 'A', needKg: 100 },
+    { name: 'B', needKg: 300 },
+  ]);
+  assert.deepEqual(
+    result.map((r) => [r.name, r.allocatedKg, r.coveragePercent]),
+    [
+      ['A', 100, 100],
+      ['B', 300, 100],
+    ],
+  );
+});
+
+test('allocate splits scarce supply equally, capped at each need', () => {
+  // Equal share is 100 each. A needs only 40, so the 60 it leaves goes to B and C.
+  const result = allocate(300, [
+    { name: 'A', needKg: 40 },
+    { name: 'B', needKg: 500 },
+    { name: 'C', needKg: 500 },
+  ]);
+  assert.deepEqual(
+    result.map((r) => r.allocatedKg),
+    [40, 130, 130],
+  );
+});
+
+test('allocate never exceeds supply or total need, and keeps input order', () => {
+  const regions = [
+    { name: 'Big', needKg: 900 },
+    { name: 'Small', needKg: 10 },
+    { name: 'Mid', needKg: 200 },
+  ];
+  const result = allocate(500, regions);
+  const total = result.reduce((sum, r) => sum + r.allocatedKg, 0);
+  assert.ok(Math.abs(total - 500) < 1e-9);
+  assert.deepEqual(result.map((r) => r.name), ['Big', 'Small', 'Mid']);
+  // Small is fully covered, Mid is fully covered from the remaining 490, Big gets the rest.
+  assert.deepEqual(result.map((r) => r.allocatedKg), [290, 10, 200]);
+});
+
+test('allocate with zero supply gives nothing and zero-need regions count as covered', () => {
+  const result = allocate(0, [
+    { name: 'A', needKg: 50 },
+    { name: 'Nobody', needKg: 0 },
+  ]);
+  assert.deepEqual(result.map((r) => [r.allocatedKg, r.coveragePercent]), [
+    [0, 0],
+    [0, 100],
+  ]);
+});
+
+test('coverage rounds down and caps at 100', () => {
+  assert.equal(coverage(1, 3), 33);
+  assert.equal(coverage(5, 4), 100);
+  assert.equal(coverage(0, 0), 100);
+});
+
+test('formatKg groups thousands and keeps one decimal', () => {
+  assert.equal(formatKg(1200), '1,200 kg');
+  assert.equal(formatKg(12.25), '12.3 kg');
+});
