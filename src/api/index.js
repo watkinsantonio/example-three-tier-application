@@ -124,6 +124,61 @@ app.get('/calendar/:year/:month', async (req, res) => {
   res.json(rows);
 });
 
+// GET /drinks — list drinks with their rating count and average, best rated first
+app.get('/drinks', async (_req, res) => {
+  const { rows } = await db.query(
+    `SELECT d.id, d.name, d.created_at,
+            COUNT(r.id)::int AS rating_count,
+            ROUND(AVG(r.score), 1)::float8 AS average_rating
+     FROM drinks d
+     LEFT JOIN drink_ratings r ON r.drink_id = d.id
+     GROUP BY d.id
+     ORDER BY average_rating DESC NULLS LAST, d.name ASC`
+  );
+  res.json(rows);
+});
+
+// POST /drinks — add a drink (name is 1-100 characters, unique ignoring case)
+app.post('/drinks', async (req, res) => {
+  const { name } = req.body ?? {};
+  if (typeof name !== 'string' || !name.trim()) {
+    return res.status(400).json({ error: 'name is required' });
+  }
+  const trimmed = name.trim();
+  if (trimmed.length > 100) {
+    return res.status(400).json({ error: 'name must be 100 characters or fewer' });
+  }
+
+  const { rows } = await db.query(
+    `INSERT INTO drinks (name) VALUES ($1)
+     ON CONFLICT (lower(name)) DO NOTHING
+     RETURNING id, name, created_at`,
+    [trimmed]
+  );
+  if (rows.length === 0) return res.status(409).json({ error: 'That drink already exists' });
+  res.status(201).json({ ...rows[0], rating_count: 0, average_rating: null });
+});
+
+// POST /drinks/:id/ratings — rate a drink with a whole score from 1 to 5
+app.post('/drinks/:id/ratings', async (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  if (!Number.isInteger(id)) return res.status(404).json({ error: 'Not found' });
+
+  const { score } = req.body ?? {};
+  if (!Number.isInteger(score) || score < 1 || score > 5) {
+    return res.status(400).json({ error: 'score must be a whole number from 1 to 5' });
+  }
+
+  const { rows: drinks } = await db.query('SELECT id FROM drinks WHERE id = $1', [id]);
+  if (drinks.length === 0) return res.status(404).json({ error: 'Not found' });
+
+  const { rows } = await db.query(
+    'INSERT INTO drink_ratings (drink_id, score) VALUES ($1, $2) RETURNING id, drink_id, score, created_at',
+    [id, score]
+  );
+  res.status(201).json(rows[0]);
+});
+
 if (require.main === module) {
   app.listen(PORT, () => {
     console.log(`API listening on port ${PORT}`);

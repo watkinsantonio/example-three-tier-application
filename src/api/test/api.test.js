@@ -134,3 +134,68 @@ test('DELETE /tasks/:id returns 404 for unknown tasks', async () => {
   assert.equal(res.status, 404);
   assert.equal(calls.length, 1);
 });
+
+test('GET /drinks lists drinks with rating count and average, best rated first', async () => {
+  const rows = [{ id: 1, name: 'Negroni', created_at: 'x', rating_count: 2, average_rating: 4.5 }];
+  nextResults = [{ rows }];
+  const res = await request('GET', '/drinks');
+  assert.equal(res.status, 200);
+  assert.deepEqual(await res.json(), rows);
+  assert.match(calls[0].text, /LEFT JOIN drink_ratings/);
+  assert.match(calls[0].text, /ORDER BY average_rating DESC NULLS LAST/);
+});
+
+test('POST /drinks trims the name and returns 201 with no ratings yet', async () => {
+  nextResults = [{ rows: [{ id: 3, name: 'Mojito', created_at: 'x' }] }];
+  const res = await request('POST', '/drinks', { name: '  Mojito ' });
+  assert.equal(res.status, 201);
+  assert.deepEqual(await res.json(), {
+    id: 3,
+    name: 'Mojito',
+    created_at: 'x',
+    rating_count: 0,
+    average_rating: null,
+  });
+  assert.deepEqual(calls[0].params, ['Mojito']);
+  assert.match(calls[0].text, /ON CONFLICT \(lower\(name\)\) DO NOTHING/);
+});
+
+test('POST /drinks rejects blank or overlong names and returns 409 for duplicates', async () => {
+  for (const name of [undefined, 42, '   ', 'x'.repeat(101)]) {
+    const res = await request('POST', '/drinks', { name });
+    assert.equal(res.status, 400, String(name));
+  }
+  assert.equal(calls.length, 0);
+
+  nextResults = [{ rows: [] }];
+  const res = await request('POST', '/drinks', { name: 'mojito' });
+  assert.equal(res.status, 409);
+});
+
+test('POST /drinks/:id/ratings stores a whole score from 1 to 5', async () => {
+  nextResults = [
+    { rows: [{ id: 2 }] },
+    { rows: [{ id: 7, drink_id: 2, score: 4, created_at: 'x' }] },
+  ];
+  const res = await request('POST', '/drinks/2/ratings', { score: 4 });
+  assert.equal(res.status, 201);
+  assert.deepEqual(calls[1].params, [2, 4]);
+});
+
+test('POST /drinks/:id/ratings rejects invalid scores with 400', async () => {
+  for (const score of [0, 6, 3.5, '4', null, undefined]) {
+    const res = await request('POST', '/drinks/2/ratings', { score });
+    assert.equal(res.status, 400, String(score));
+  }
+  assert.equal(calls.length, 0);
+});
+
+test('POST /drinks/:id/ratings returns 404 for unknown drinks', async () => {
+  let res = await request('POST', '/drinks/abc/ratings', { score: 3 });
+  assert.equal(res.status, 404);
+
+  nextResults = [{ rows: [] }];
+  res = await request('POST', '/drinks/99/ratings', { score: 3 });
+  assert.equal(res.status, 404);
+  assert.equal(calls.length, 1);
+});
