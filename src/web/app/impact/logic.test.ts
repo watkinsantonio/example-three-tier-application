@@ -137,6 +137,15 @@ test('coverage rounds down and caps at 100', () => {
   assert.equal(coverage(0, 0), 100);
 });
 
+test('coverage never shows 100% for a real shortfall, even just below need', () => {
+  // 99.9999999% covered is a shortfall of 1 kg at this scale: it must read 99, not 100.
+  assert.equal(coverage(999_999_999, 1_000_000_000), 99);
+  assert.equal(coverage(0.19, 0.2), 95);
+  const result = allocate(1_000_000_000 - 1, [{ name: 'A', needKg: 1_000_000_000 }]);
+  assert.equal(result[0].coveragePercent, 99);
+  assert.equal(summarize(1_000_000_000 - 1, result).status, 'short');
+});
+
 test('formatKg groups thousands and keeps one decimal', () => {
   assert.equal(formatKg(1200), '1,200 kg');
   assert.equal(formatKg(12.25), '12.3 kg');

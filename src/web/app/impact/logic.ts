@@ -134,11 +134,15 @@ export function unmetKg(allocations: Allocation[]): number {
   return Math.max(0, need - allocated);
 }
 
-/** Percentage of `needKg` covered by `allocatedKg`, rounded down, 0-100. */
+/**
+ * Percentage of `needKg` covered by `allocatedKg`, rounded down, 0-100.
+ * Only an amount that meets the need (or matches it within float noise) reports 100;
+ * a real shortfall never rounds up to 100.
+ */
 export function coverage(allocatedKg: number, needKg: number): number {
   if (needKg <= 0) return 100;
-  // The ratio is scale-free, so a fixed tolerance on the percentage is safe here.
-  return Math.min(100, Math.floor((allocatedKg / needKg) * 100 + 1e-9));
+  if (allocatedKg >= needKg || kgNear(allocatedKg, needKg)) return 100;
+  return Math.min(99, Math.floor((allocatedKg / needKg) * 100));
 }
 
 export interface PlanSummary {
