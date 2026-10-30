@@ -27,6 +27,12 @@ test('parseRegions uses the last comma so names may contain commas', () => {
   });
 });
 
+test('parseRegions rejects duplicate region names, ignoring case', () => {
+  const dup = parseRegions('North, 10\nnorth, 20');
+  assert.ok('error' in dup);
+  assert.match(dup.error, /^Line 2:/);
+});
+
 test('parseRegions rejects malformed input with a line number', () => {
   assert.ok('error' in parseRegions(''));
   assert.ok('error' in parseRegions('no comma here'));

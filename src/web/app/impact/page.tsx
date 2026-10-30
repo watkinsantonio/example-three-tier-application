@@ -37,6 +37,7 @@ export default async function ImpactPage({ searchParams }: { searchParams: Searc
           Food Distribution Planner
         </h1>
         <p className="text-sm text-zinc-600 dark:text-zinc-400 mb-8">
+          A planning aid, not a solution: it only divides the food you enter across the regions you list.
           Enter the food available and each region&apos;s need. Supply is shared out fairly: every region
           gets an equal share, capped at its need, and any surplus goes to regions that still have a gap.
         </p>
@@ -88,9 +89,9 @@ export default async function ImpactPage({ searchParams }: { searchParams: Searc
               Distributing {formatKg(totalSupplied)} of {formatKg(totalNeed)} total need.
             </p>
             <ul className="space-y-3">
-              {result.map((region) => (
+              {result.map((region, index) => (
                 <li
-                  key={region.name}
+                  key={index}
                   className="rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-4 py-3"
                 >
                   <div className="flex items-baseline justify-between gap-4">

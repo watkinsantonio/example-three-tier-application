@@ -36,6 +36,7 @@ export function parseKg(input: unknown): { value: number } | { error: string } {
  */
 export function parseRegions(text: string): { regions: Region[] } | { error: string } {
   const regions: Region[] = [];
+  const seen = new Set<string>();
   const lines = text.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
   for (const [index, line] of lines.entries()) {
     const comma = line.lastIndexOf(',');
@@ -50,6 +51,11 @@ export function parseRegions(text: string): { regions: Region[] } | { error: str
     if ('error' in need) {
       return { error: `Line ${index + 1}: ${need.error}` };
     }
+    const key = name.toLowerCase();
+    if (seen.has(key)) {
+      return { error: `Line ${index + 1}: region "${name}" is listed more than once.` };
+    }
+    seen.add(key);
     regions.push({ name, needKg: need.value });
   }
   if (regions.length === 0) {
