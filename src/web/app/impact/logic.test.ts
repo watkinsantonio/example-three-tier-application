@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { allocate, coverage, formatKg, parseKg, parseRegions } from './logic.ts';
+import { allocate, coverage, formatKg, leftoverKg, parseKg, parseRegions, unmetKg } from './logic.ts';
 
 test('parseKg accepts non-negative numbers, including form strings', () => {
   assert.deepEqual(parseKg('250'), { value: 250 });
@@ -11,6 +11,23 @@ test('parseKg accepts non-negative numbers, including form strings', () => {
   assert.ok('error' in parseKg(''));
   assert.ok('error' in parseKg(Infinity));
 });
+
+test('parseKg accepts only plain decimal digits from forms', () => {
+  assert.ok('error' in parseKg('0x10'));
+  assert.ok('error' in parseKg('1e3'));
+  assert.ok('error' in parseKg('+5'));
+  assert.ok('error' in parseKg(' 1 2 '));
+  assert.deepEqual(parseKg(' 7.5 '), { value: 7.5 });
+});
+
+test('parseRegions rejects oversized text before splitting it', () => {
+  const huge = 'a, 1\n'.repeat(2000);
+  assert.ok(huge.length > 5000);
+  const result = parseRegions(huge);
+  assert.ok('error' in result);
+  assert.match(result.error, /too long/);
+});
+
 
 test('parseRegions reads "Name, kg" lines and ignores blank lines', () => {
   assert.deepEqual(parseRegions('North, 100\n\n  South ,  50.5 \r\n'), {
@@ -93,6 +110,25 @@ test('allocate with zero supply gives nothing and zero-need regions count as cov
     [0, 0],
     [0, 100],
   ]);
+});
+
+test('exact supply matching need reports 100% coverage despite float error', () => {
+  // 0.3 - 0.1 leaves 0.19999999999999998, which must still fully cover the 0.2 need.
+  const result = allocate(0.3, [
+    { name: 'A', needKg: 0.1 },
+    { name: 'B', needKg: 0.2 },
+  ]);
+  assert.deepEqual(result.map((r) => r.coveragePercent), [100, 100]);
+  assert.equal(leftoverKg(0.3, result), 0);
+});
+
+test('leftoverKg and unmetKg report surplus and shortfall', () => {
+  const surplus = allocate(1000, [{ name: 'A', needKg: 100 }]);
+  assert.equal(leftoverKg(1000, surplus), 900);
+  assert.equal(unmetKg(surplus), 0);
+  const short = allocate(50, [{ name: 'A', needKg: 100 }]);
+  assert.equal(leftoverKg(50, short), 0);
+  assert.equal(unmetKg(short), 50);
 });
 
 test('coverage rounds down and caps at 100', () => {

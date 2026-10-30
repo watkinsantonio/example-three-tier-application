@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { allocate, formatKg, parseKg, parseRegions } from './logic';
+import { allocate, formatKg, leftoverKg, parseKg, parseRegions, unmetKg } from './logic';
 
 export const metadata: Metadata = {
   title: 'Food Distribution Planner',
@@ -15,17 +15,23 @@ export default async function ImpactPage({ searchParams }: { searchParams: Searc
   const submitted = supply !== '' || regionsText !== '';
 
   let result: ReturnType<typeof allocate> | null = null;
+  let supplyKg = 0;
   let error: string | null = null;
   if (submitted) {
     const parsedSupply = parseKg(supply);
     const parsedRegions = parseRegions(regionsText);
     if ('error' in parsedSupply) error = parsedSupply.error;
     else if ('error' in parsedRegions) error = parsedRegions.error;
-    else result = allocate(parsedSupply.value, parsedRegions.regions);
+    else {
+      supplyKg = parsedSupply.value;
+      result = allocate(supplyKg, parsedRegions.regions);
+    }
   }
 
   const totalSupplied = result ? result.reduce((sum, r) => sum + r.allocatedKg, 0) : 0;
   const totalNeed = result ? result.reduce((sum, r) => sum + r.needKg, 0) : 0;
+  const leftover = result ? leftoverKg(supplyKg, result) : 0;
+  const unmet = result ? unmetKg(result) : 0;
 
   return (
     <main className="min-h-screen bg-zinc-50 dark:bg-zinc-900 py-16 px-4">
@@ -87,6 +93,19 @@ export default async function ImpactPage({ searchParams }: { searchParams: Searc
           <section aria-label="Distribution plan">
             <p className="text-sm text-zinc-600 dark:text-zinc-400 mb-4">
               Distributing {formatKg(totalSupplied)} of {formatKg(totalNeed)} total need.
+            </p>
+            <p className="text-sm mb-4" role="status">
+              {leftover > 0 && (
+                <span className="text-zinc-700 dark:text-zinc-300">{formatKg(leftover)} left over after every need is met.</span>
+              )}
+              {unmet > 0 && (
+                <span className="text-amber-600 dark:text-amber-400">
+                  Short by {formatKg(unmet)}: supply does not cover all needs.
+                </span>
+              )}
+              {leftover === 0 && unmet === 0 && (
+                <span className="text-zinc-700 dark:text-zinc-300">Supply matches need exactly.</span>
+              )}
             </p>
             <ul className="space-y-3">
               {result.map((region, index) => (

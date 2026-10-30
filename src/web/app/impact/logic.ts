@@ -20,10 +20,15 @@ export interface Allocation extends Region {
 
 export const MAX_REGIONS = 50;
 export const MAX_REGION_NAME_LENGTH = 60;
+/** Upper bound on the raw regions text, checked before any splitting. */
+export const MAX_REGIONS_TEXT_LENGTH = 5000;
+/** Float tolerance for kg arithmetic: amounts within this are treated as equal. */
+const KG_EPSILON = 1e-9;
 
-/** Validate a non-negative kilogram amount from a form. */
+/** Validate a non-negative kilogram amount: plain decimal digits only (no hex, exponents or signs). */
 export function parseKg(input: unknown): { value: number } | { error: string } {
-  const kg = typeof input === 'string' && input.trim() !== '' ? Number(input) : input;
+  const text = typeof input === 'string' ? input.trim() : input;
+  const kg = typeof text === 'string' && /^\d+(\.\d+)?$/.test(text) ? Number(text) : input;
   if (typeof kg !== 'number' || !Number.isFinite(kg) || kg < 0) {
     return { error: 'Enter an amount of 0 kg or more.' };
   }
@@ -35,6 +40,9 @@ export function parseKg(input: unknown): { value: number } | { error: string } {
  * "Northern District, 1200". Blank lines are ignored.
  */
 export function parseRegions(text: string): { regions: Region[] } | { error: string } {
+  if (text.length > MAX_REGIONS_TEXT_LENGTH) {
+    return { error: `The region list is too long. Plan at most ${MAX_REGIONS} regions at a time.` };
+  }
   const regions: Region[] = [];
   const seen = new Set<string>();
   const lines = text.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
@@ -83,9 +91,11 @@ export function allocate(supplyKg: number, regions: Region[]): Allocation[] {
   order.forEach(({ region, index }, position) => {
     const regionsLeft = order.length - position;
     const fairShare = remainingSupply / regionsLeft;
-    const give = Math.min(region.needKg, fairShare);
+    // Snap to the full need when the share is within float noise of it, so exact matches stay exact.
+    const give =
+      region.needKg - fairShare <= KG_EPSILON ? region.needKg : Math.min(region.needKg, fairShare);
     allocated[index] = give;
-    remainingSupply -= give;
+    remainingSupply = Math.max(0, remainingSupply - give);
   });
 
   return regions.map((region, index) => ({
@@ -95,10 +105,25 @@ export function allocate(supplyKg: number, regions: Region[]): Allocation[] {
   }));
 }
 
+/** Food left unallocated after distribution, snapped to 0 within float noise. Never negative. */
+export function leftoverKg(supplyKg: number, allocations: Allocation[]): number {
+  const allocated = allocations.reduce((sum, a) => sum + a.allocatedKg, 0);
+  const diff = Math.max(0, supplyKg - allocated);
+  return diff <= KG_EPSILON ? 0 : diff;
+}
+
+/** Need that could not be covered: total need minus total allocated, snapped to 0 within float noise. */
+export function unmetKg(allocations: Allocation[]): number {
+  const need = allocations.reduce((sum, a) => sum + a.needKg, 0);
+  const allocated = allocations.reduce((sum, a) => sum + a.allocatedKg, 0);
+  const diff = Math.max(0, need - allocated);
+  return diff <= KG_EPSILON ? 0 : diff;
+}
+
 /** Percentage of `needKg` covered by `allocatedKg`, rounded down, 0-100. */
 export function coverage(allocatedKg: number, needKg: number): number {
   if (needKg <= 0) return 100;
-  return Math.min(100, Math.floor((allocatedKg / needKg) * 100));
+  return Math.min(100, Math.floor((allocatedKg / needKg) * 100 + KG_EPSILON));
 }
 
 /** Kilograms with thousands separators and at most one decimal, e.g. "1,200.5 kg". */
