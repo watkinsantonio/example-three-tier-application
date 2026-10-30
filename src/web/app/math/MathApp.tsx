@@ -65,7 +65,7 @@ export default function MathApp() {
       return;
     }
     const loaded = loadState(storage);
-    readOnly.current = loaded.status === 'newer';
+    readOnly.current = loaded.status === 'newer' || loaded.status === 'unavailable';
     setLoadStatus(loaded.status);
     setState(loaded.state);
   }, []);
@@ -92,6 +92,12 @@ export default function MathApp() {
         <p role="alert" className="rounded-lg bg-amber-50 dark:bg-amber-950 px-4 py-2 text-amber-900 dark:text-amber-100">
           Saved progress could not be read, so MathPath started fresh. A copy of the unreadable data was kept in this
           browser under &ldquo;mathpath.v1.unreadable&rdquo;.
+        </p>
+      )}
+      {loadStatus === 'unavailable' && (
+        <p role="alert" className="rounded-lg bg-amber-50 dark:bg-amber-950 px-4 py-2 text-amber-900 dark:text-amber-100">
+          Saved progress could not be read from this browser. To avoid overwriting it, nothing you do on this page will
+          be saved. Reload the page to try again.
         </p>
       )}
       {loadStatus === 'newer' && (
@@ -262,7 +268,7 @@ function LearnerPicker({
         </label>
         {showGuardian && (
           <label className="block text-sm text-zinc-700 dark:text-zinc-300">
-            Parent or guardian name (required for learners {GUARDIAN_AGE_LIMIT} or younger)
+            Parent or guardian name (required for learners under {GUARDIAN_AGE_LIMIT}, judged by birth year)
             <input
               className={inputClass}
               value={guardian}

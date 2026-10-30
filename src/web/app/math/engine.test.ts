@@ -376,5 +376,5 @@ test('loadState keeps a backup of unreadable data and saveState reports storage 
   const full = { getItem: () => null, setItem: () => { throw new Error('QuotaExceededError'); } };
   assert.match(saveState(full, emptyState()) ?? '', /could not be saved/);
   const broken = { getItem: () => { throw new Error('denied'); }, setItem: () => {} };
-  assert.equal(loadState(broken).status, 'empty');
+  assert.equal(loadState(broken).status, 'unavailable');
 });

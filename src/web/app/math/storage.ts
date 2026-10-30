@@ -4,7 +4,7 @@ import { STORE_VERSION, type MathState } from './types.ts';
 export const STORAGE_KEY = 'mathpath.v1';
 export const BACKUP_KEY = 'mathpath.v1.unreadable';
 
-export type LoadStatus = 'ok' | 'empty' | 'corrupt' | 'newer';
+export type LoadStatus = 'ok' | 'empty' | 'corrupt' | 'newer' | 'unavailable';
 
 export interface LoadResult {
   state: MathState;
@@ -109,7 +109,8 @@ export function loadState(storage: KeyValueStorage): LoadResult {
   try {
     raw = storage.getItem(STORAGE_KEY);
   } catch {
-    return { state: emptyState(), status: 'empty' };
+    // Existing progress may be there but unreadable: never overwrite it.
+    return { state: emptyState(), status: 'unavailable' };
   }
   const result = parseStored(raw);
   if (result.status === 'corrupt' && raw !== null) {

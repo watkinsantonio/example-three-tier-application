@@ -36,7 +36,11 @@ export function emptyState(): MathState {
 
 // ---------- learners ----------
 
-/** Learners aged 13 or younger (judged conservatively by birth year alone) need a guardian on file. */
+/**
+ * "Under 13" judged by birth year alone: anyone who is 13 or younger by year difference counts, because they may not
+ * have turned 13 yet this year. This deliberately errs on the side of asking for a guardian. The guardian is only a
+ * name on file, not verified consent.
+ */
 export function needsGuardian(birthYear: number, now: Date): boolean {
   return now.getFullYear() - birthYear <= GUARDIAN_AGE_LIMIT;
 }

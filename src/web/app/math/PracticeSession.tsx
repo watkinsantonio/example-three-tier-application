@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { getSkill } from './curriculum.ts';
 import { nextActivity, presentProblem, submitAttempt, type Activity, type AttemptResult } from './engine.ts';
 import { newId, newSeed, percent } from './ids.ts';
@@ -21,6 +21,12 @@ export default function PracticeSession({ state, learner, initial, commit, onExi
   const [result, setResult] = useState<AttemptResult | null>(null);
   const [score, setScore] = useState({ right: 0, total: 0 });
   const startedAt = useRef<number | null>(null);
+  const problemKey = activity ? `${activity.template_id}:${activity.seed}` : '';
+
+  // Start timing when a problem appears.
+  useEffect(() => {
+    startedAt.current = Date.now();
+  }, [problemKey]);
 
   const skillId = initial.reason === 'chosen' ? initial.skill_id : undefined;
 
@@ -62,15 +68,10 @@ export default function PracticeSession({ state, learner, initial, commit, onExi
     setActivity(next);
     setResult(null);
     setHintsShown(0);
-    startedAt.current = Date.now();
-  }
-
-  function markShown() {
-    if (startedAt.current === null) startedAt.current = Date.now();
   }
 
   return (
-    <section className="space-y-6" onFocus={markShown} onClick={markShown}>
+    <section className="space-y-6">
       <div className="flex items-center justify-between text-sm text-zinc-600 dark:text-zinc-400">
         <span>
           {skill?.name} ·{' '}
