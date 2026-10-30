@@ -63,3 +63,10 @@ export async function updateTaskDueDate(id: number, dueDate: string | null) {
   });
   revalidateTaskViews();
 }
+
+export async function deleteTask(id: number) {
+  await fetch(`${API_URL}/tasks/${id}`, {
+    method: 'DELETE',
+  });
+  revalidateTaskViews();
+}
