@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "node --test --experimental-strip-types --disable-warning=MODULE_TYPELESS_PACKAGE_JSON app/checkers/logic.test.ts app/drinks/logic.test.ts"
+    "test": "node --test --experimental-strip-types --disable-warning=MODULE_TYPELESS_PACKAGE_JSON app/checkers/logic.test.ts app/drinks/logic.test.ts app/math/content.test.ts app/math/grading.test.ts app/math/engine.test.ts"
   },
   "dependencies": {
     "next": "16.2.9",

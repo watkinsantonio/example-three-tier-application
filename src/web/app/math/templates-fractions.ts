@@ -125,7 +125,7 @@ export const FRACTION_TEMPLATES: ProblemTemplate[] = [
         choices: shuffle(rng, [`${n}/${a}`, `${n}/${b}`]),
       };
     },
-    (p) => ['Both fractions have the same number of pieces. Compare the size of each piece.', 'The more pieces a whole is cut into, the smaller each piece is.'],
+    () => ['Both fractions have the same number of pieces. Compare the size of each piece.', 'The more pieces a whole is cut into, the smaller each piece is.'],
     (p, answer) => `With the same numerator, the smaller denominator means bigger pieces, so ${answer} is larger.`,
     [
       check(
@@ -176,7 +176,7 @@ export const FRACTION_TEMPLATES: ProblemTemplate[] = [
         : ['The numerators match, so compare the size of the pieces: more pieces in the whole means smaller pieces.'],
     (_p, answer) => `From smallest to largest: ${answer.split('|').join(' < ')}.`,
     [
-      check('reversed_order', 'Ordered from largest to smallest', 'Check the direction: start with the smallest fraction.', (r, _p) => {
+      check('reversed_order', 'Ordered from largest to smallest', 'Check the direction: start with the smallest fraction.', (r) => {
         const parts = r.split('|');
         if (parts.length < 2) return false;
         const sorted = [...parts].sort((x, y) => value(y) - value(x));
@@ -249,7 +249,7 @@ export const FRACTION_TEMPLATES: ProblemTemplate[] = [
         ]),
       };
     },
-    (p) => ['Equivalent fractions come from multiplying top and bottom by the same number.'],
+    () => ['Equivalent fractions come from multiplying top and bottom by the same number.'],
     (p, answer) => `Multiplying ${num(p, 'n')}/${num(p, 'd')} by ${num(p, 'k')}/${num(p, 'k')} gives ${answer}.`,
     [
       check('added_same_amount', 'Added the same amount to top and bottom', 'Adding the same number to top and bottom does not keep the fraction equal.', (r, p) =>
@@ -274,7 +274,7 @@ export const FRACTION_TEMPLATES: ProblemTemplate[] = [
         params: { n1, n2, d1: d, d2: d },
       };
     },
-    (p) => ['The pieces are the same size, so just add the number of pieces.', 'Keep the denominator and simplify if you can.'],
+    () => ['The pieces are the same size, so just add the number of pieces.', 'Keep the denominator and simplify if you can.'],
     (p, answer) => `${num(p, 'n1')} + ${num(p, 'n2')} = ${num(p, 'n1') + num(p, 'n2')} pieces of size 1/${num(p, 'd1')}, which is ${answer}.`,
     [addedDenominators],
   ),

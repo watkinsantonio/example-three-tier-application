@@ -185,7 +185,7 @@ export const ALGEBRA_TEMPLATES: ProblemTemplate[] = [
       const b = int(rng, 2, 9);
       return { prompt: `Simplify: ${a}x + ${b}x`, answer: `${a + b}x`, params: { a, b } };
     },
-    (p) => ['Both terms have x, so they are like terms. Add their coefficients.'],
+    () => ['Both terms have x, so they are like terms. Add their coefficients.'],
     (p, answer) => `${num(p, 'a')}x + ${num(p, 'b')}x = (${num(p, 'a')} + ${num(p, 'b')})x = ${answer}.`,
     [
       check('multiplied_coefficients', 'Multiplied the coefficients', 'When adding like terms, add the coefficients; do not multiply.', (r, p) =>
