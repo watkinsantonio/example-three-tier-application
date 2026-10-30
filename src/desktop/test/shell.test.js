@@ -151,7 +151,9 @@ test('package.json: declares the entry point, Node engine and packaging files', 
   assert.equal(pkg.main, 'electron/main.js');
   assert.ok(fs.existsSync(path.join(root, pkg.main)));
   // Must allow the locked jsdom's minimum Node.
-  assert.equal(pkg.engines.node, lock.packages['node_modules/jsdom'].engines.node);
+  // The runtime is Electron's own Node; the range here is only the floor for test tooling (jsdom needs 22.22.2+, see README).
+  assert.equal(pkg.engines.node, '>=22');
+  assert.ok(lock.packages['node_modules/jsdom'].engines.node.includes('22'));
   for (const dir of ['electron', 'renderer', 'core']) assert.ok(pkg.build.files.some((f) => f.startsWith(dir + '/')));
   // Electron and the packager are pinned dev dependencies, not fetched with npx at run time.
   for (const name of ['electron', 'electron-builder']) {

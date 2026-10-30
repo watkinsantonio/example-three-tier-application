@@ -41,7 +41,7 @@ test('learner profiles: validation and the under-13 guardian rule', () => {
   assert.throws(() => engine.createLearner({ display_name: 'A', birth_year: 2030 }), /birth year/);
   assert.throws(() => engine.createLearner({ display_name: 'A'.repeat(41), birth_year: 1990 }), /too long/);
 
-  // The clock says 2025: born 2013 is 12 (needs guardian), born 2012 is 13 (does not).
+  // The clock says 2025 and only the birth year is known: born 2012 may still be 12, so a guardian is needed; born 2011 is at least 13.
   assert.throws(() => engine.createLearner({ display_name: 'Kit', birth_year: 2013 }), /guardian/);
   assert.throws(() => engine.createLearner({ display_name: 'Kit', birth_year: 2013, guardian_name: '  ' }), /guardian/);
   assert.equal(engine.listLearners().length, 0, 'failed validation creates nothing');
@@ -50,7 +50,7 @@ test('learner profiles: validation and the under-13 guardian rule', () => {
   const kid = engine.createLearner({ display_name: 'Kit', birth_year: 2013, guardian_name: 'Pat' });
   assert.ok(kid.guardian_id && engine.data.guardians[kid.guardian_id].name === 'Pat');
   assert.equal(kid.age_band, '11-12');
-  const teen = engine.createLearner({ display_name: 'Lee', birth_year: 2012 });
+  const teen = engine.createLearner({ display_name: 'Lee', birth_year: 2011 });
   assert.equal(teen.guardian_id, null);
   assert.equal(engine.listLearners().length, 2);
 });
@@ -117,6 +117,7 @@ test('wrong answers detect misconceptions', () => {
   const needed = ['2.num.order', '3.add.regroup', '3.mult.facts', '3.div.facts', '4.frac.equiv'];
   for (const s of needed) assert.equal(practiceCorrect(engine, l, s, 12).mastery.status, 'mastered', s);
   const seed = 31;
+  engine._issue(l.id, '5.frac.add.like.proper', seed);
   const p = buildProblem('5.frac.add.like.proper', seed);
   const res = engine.submitAnswer({ learner_id: l.id, template_id: p.template_id, seed, response: { n: p.params.a + p.params.b, d: p.params.d * 2 } });
   assert.equal(res.is_correct, false);
@@ -125,6 +126,7 @@ test('wrong answers detect misconceptions', () => {
   assert.equal(res.mastery.streak, 0);
   // "Right amount, wrong form"
   const seed2 = 32;
+  engine._issue(l.id, '4.frac.equiv.simplify', seed2);
   const q = buildProblem('4.frac.equiv.simplify', seed2);
   const unsimplified = engine.submitAnswer({ learner_id: l.id, template_id: q.template_id, seed: seed2, response: { n: q.answer.n * q.params.k, d: q.answer.d * q.params.k } });
   assert.equal(unsimplified.is_correct, false);
@@ -275,6 +277,26 @@ test('a wrong answer on a mastered skill does not re-lock the skills that depend
   // Dependent skills stay open: can still ask and submit.
   const dep = engine.nextProblem({ learner_id: l.id, skill_id: '3.mult.facts' });
   assert.equal(engine.submitAnswer({ learner_id: l.id, template_id: dep.problem.template_id, seed: dep.problem.seed, response: answerOf(dep.problem) }).is_correct, true);
+});
+
+test('guardian rule is conservative about the unknown birth month', () => {
+  const { engine } = setup(); // clock: 2025
+  assert.throws(() => engine.createLearner({ display_name: 'Max', birth_year: 2012 }), /may be under 13/);
+  assert.ok(engine.createLearner({ display_name: 'Max', birth_year: 2012, guardian_name: 'Pat' }).guardian_id);
+  assert.equal(engine.createLearner({ display_name: 'Eli', birth_year: 2011 }).guardian_id, null);
+});
+
+test('only questions the app handed out can be submitted', () => {
+  const { engine } = setup();
+  const l = adult(engine);
+  const made = buildProblem('2.num.order.2digit', 77);
+  assert.throws(() => engine.submitAnswer({ learner_id: l.id, template_id: made.template_id, seed: 77, response: made.answer }), /not given to you/);
+  assert.equal(engine.data.attempts.length, 0, 'a self-chosen seed earns nothing');
+  const { problem } = engine.nextProblem({ learner_id: l.id });
+  assert.throws(() => engine.submitAnswer({ learner_id: l.id, template_id: problem.template_id, seed: problem.seed + 1, response: answerOf(problem) }), /not given to you/);
+  assert.equal(engine.submitAnswer({ learner_id: l.id, template_id: problem.template_id, seed: problem.seed, response: answerOf(problem) }).is_correct, true);
+  for (let i = 0; i < 80; i++) engine.nextProblem({ learner_id: l.id });
+  assert.ok(engine.issued.size <= 50, 'memory is bounded');
 });
 
 test('api exposes exactly the declared methods', () => {

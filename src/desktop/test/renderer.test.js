@@ -98,10 +98,12 @@ test('renderer: new-learner form shows the guardian field only for under-13s and
   await waitFor(() => doc.querySelector('[data-screen="profiles"]'));
   const row = doc.getElementById('guardian-row');
   assert.equal(row.hidden, true);
-  const thisYear = new Date().getFullYear();
+  const thisYear = new Date().getUTCFullYear();
   setValue(doc.getElementById('birth_year'), String(thisYear - 8));
   assert.equal(row.hidden, false);
   setValue(doc.getElementById('birth_year'), String(thisYear - 13));
+  assert.equal(row.hidden, false, 'only the birth year is known, so 13 may still be 12');
+  setValue(doc.getElementById('birth_year'), String(thisYear - 14));
   assert.equal(row.hidden, true);
   await createLearner(ctx, { name: 'Kit', year: thisYear - 8 });
   await waitFor(() => doc.querySelector('.error').textContent.includes('guardian'), 'guardian error');
@@ -255,6 +257,19 @@ test('renderer: progress screen lists every skill with real text and locks later
   assert.equal(doc.querySelector('[data-skill="3.mult.facts"] button'), null, 'locked skills cannot be practised');
   assert.ok(doc.querySelector('[data-skill="2.num.order"] button'));
   assert.equal(doc.querySelector('[data-skill="2.num.order"] .bar > div').style.width, '10%');
+});
+
+test('renderer: a profile can be deleted after a confirmation step', async () => {
+  const ctx = boot();
+  const { doc } = ctx;
+  await createLearner(ctx, { name: 'Ada' });
+  click(await waitFor(() => doc.getElementById('delete'), 'delete button'));
+  click(await waitFor(() => doc.getElementById('delete-no'), 'cancel'));
+  assert.equal(ctx.engine.listLearners().length, 1, 'cancel keeps the profile');
+  click(doc.getElementById('delete'));
+  click(doc.getElementById('delete-yes'));
+  await waitFor(() => doc.querySelector('[data-screen="profiles"]'), 'back to profiles');
+  assert.equal(ctx.engine.listLearners().length, 0);
 });
 
 test('renderer: switching learner shows existing profiles', async () => {

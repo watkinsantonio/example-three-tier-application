@@ -1,6 +1,6 @@
 'use strict';
 
-const { formatPoly, polyEquals, parseExpression } = require('./expression');
+const { formatPoly, polyEquals } = require('./expression');
 const { makeChoices } = require('./helpers');
 
 const near = (r, v) => typeof r === 'number' && Math.abs(r - v) < 1e-9;
@@ -213,7 +213,7 @@ const TWOSTEP_TEMPLATES = [
       {
         id: 'forgot-to-divide',
         label: 'Stopped after the first step',
-        message: 'After subtracting you still have ' + 'a number times x. Divide to get x on its own.',
+        message: 'After subtracting you still have a number times x. Divide to get x on its own.',
         test: (r, { params: { v, a } }) => near(r, a * v),
       },
       {
@@ -241,7 +241,7 @@ const TWOSTEP_TEMPLATES = [
       {
         id: 'sign-error',
         label: 'Subtracted when it should be added',
-        message: 'The equation has - ' + 'a number, so undo it by adding that number to both sides.',
+        message: 'The equation has - a number, so undo it by adding that number to both sides.',
         test: (r, { params: { v, a, b } }) => near(r, (a * v - 2 * b) / a),
       },
     ],
@@ -270,4 +270,4 @@ const TWOSTEP_TEMPLATES = [
   },
 ];
 
-module.exports = { ALGEBRA_TEMPLATES: [...EVAL_TEMPLATES, ...SIMPLIFY_TEMPLATES, ...ONESTEP_TEMPLATES, ...TWOSTEP_TEMPLATES], parseExpression };
+module.exports = { ALGEBRA_TEMPLATES: [...EVAL_TEMPLATES, ...SIMPLIFY_TEMPLATES, ...ONESTEP_TEMPLATES, ...TWOSTEP_TEMPLATES] };

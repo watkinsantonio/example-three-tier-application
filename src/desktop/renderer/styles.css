@@ -45,3 +45,6 @@ label { display: block; margin: 10px 0 4px; font-weight: 600; }
 .badge.mastered { background: #d3f9d8; color: var(--good); }
 .badge.learning { background: #dbe4ff; color: var(--accent); }
 .badge.review { background: #fff3bf; color: #8a6d00; }
+
+#delete-box { margin-top: 16px; }
+button.danger-button { background: var(--bad); color: #fff; border-color: var(--bad); }

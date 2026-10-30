@@ -50,16 +50,17 @@
       setWho();
       const learners = await load(() => api.listLearners(), profilesScreen, profilesScreen);
       if (!learners) return;
-      const yearNow = new Date().getFullYear();
+      const yearNow = new Date().getUTCFullYear();
       const err = errorBox();
 
       const name = h('input', { type: 'text', id: 'name', maxlength: '40', autocomplete: 'off' });
       const year = h('input', { type: 'number', id: 'birth_year', min: '1900', max: String(yearNow) });
       const guardian = h('input', { type: 'text', id: 'guardian', maxlength: '60', autocomplete: 'off' });
-      const guardianRow = h('div', { id: 'guardian-row', hidden: true }, h('label', { for: 'guardian' }, 'Parent or guardian name (required under 13)'), guardian);
+      const guardianRow = h('div', { id: 'guardian-row', hidden: true }, h('label', { for: 'guardian' }, 'Parent or guardian name (required if you are 13 or younger)'), guardian);
       year.addEventListener('input', () => {
         const y = Number(year.value);
-        guardianRow.hidden = !(Number.isInteger(y) && y > 1900 && yearNow - y < 13);
+        // Same rule as core/engine.js: only the birth year is known, so someone born 13 years ago may still be 12.
+        guardianRow.hidden = !(Number.isInteger(y) && y > 1900 && yearNow - y <= 13);
       });
       const form = h('form', { id: 'new-learner' }, h('label', { for: 'name' }, 'Name'), name, h('label', { for: 'birth_year' }, 'Year of birth'), year, guardianRow, err, h('button', { type: 'submit' }, 'Create profile'));
       form.addEventListener('submit', async (ev) => {
@@ -95,9 +96,36 @@
           h('button', { id: 'practice', onclick: () => practiceScreen() }, 'Practise'),
           progress.attempts === 0 ? h('button', { id: 'placement', class: 'secondary', onclick: placementScreen }, 'Find my starting point') : h('button', { id: 'placement', class: 'secondary', onclick: placementScreen }, 'Take the placement check'),
           h('button', { id: 'progress', class: 'secondary', onclick: progressScreen }, 'My progress'),
-          h('button', { class: 'secondary', onclick: profilesScreen }, 'Switch learner')
+          h('button', { class: 'secondary', onclick: profilesScreen }, 'Switch learner'),
+          deleteControl()
         )
       );
+    }
+
+    /** Two-step delete (no browser confirm() in a desktop window): button, then "Really delete?". */
+    function deleteControl() {
+      const box = h('div', { class: 'danger', id: 'delete-box' });
+      const err = errorBox();
+      const ask = () => {
+        box.replaceChildren(
+          h('p', null, 'Delete ' + state.learner.display_name + "'s profile and all of their progress? This cannot be undone."),
+          h('button', { id: 'delete-yes', class: 'danger-button', onclick: confirmDelete }, 'Yes, delete'),
+          h('button', { id: 'delete-no', class: 'secondary', onclick: reset }, 'Cancel'),
+          err
+        );
+      };
+      const reset = () => box.replaceChildren(h('button', { id: 'delete', class: 'secondary', onclick: ask }, 'Delete this profile'));
+      const confirmDelete = async () => {
+        err.textContent = '';
+        try {
+          await api.deleteLearner({ learner_id: state.learner.id });
+          profilesScreen();
+        } catch (e) {
+          err.textContent = msg(e);
+        }
+      };
+      reset();
+      return box;
     }
 
     // ── progress ─────────────────────────────────────────────────────────────

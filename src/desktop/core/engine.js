@@ -8,6 +8,11 @@ const { normalizeResponse, gradeResponse } = require('./grading');
 const { newMastery, updateMastery, placeMastery } = require('./mastery');
 
 const GUARDIAN_UNDER_AGE = 13; // learners younger than this need a guardian on file
+// Only the birth year is collected, so the exact age is unknown: someone born in
+// (thisYear - 13) is 12 or 13. To be safe they are treated as possibly under 13.
+// Keep the matching check in renderer/app.js in step.
+const MAX_YEARS_NEEDING_GUARDIAN = GUARDIAN_UNDER_AGE; // guardian needed when thisYear - birth_year <= 13
+const MAX_ISSUED_PER_LEARNER = 50;
 const NOT_SIMPLIFIED = {
   id: 'not-simplified',
   label: 'Right amount, but not in simplest form',
@@ -35,6 +40,8 @@ class Engine {
     this.store = store;
     this.now = now;
     this.randomSeed = randomSeed;
+    // Questions handed out by nextProblem and not yet answered (memory only). Only these can be submitted.
+    this.issued = new Map();
   }
 
   get data() {
@@ -82,12 +89,13 @@ class Engine {
     if (!Number.isInteger(year) || year < 1900 || year > thisYear) throw new UserError('Enter a birth year between 1900 and ' + thisYear + '.');
     const age = thisYear - year;
     const gName = guardian_name == null ? '' : String(guardian_name).trim();
-    if (age < GUARDIAN_UNDER_AGE && !gName) throw new UserError('Learners under ' + GUARDIAN_UNDER_AGE + ' need a parent or guardian name.');
+    const maybeUnder13 = age <= MAX_YEARS_NEEDING_GUARDIAN;
+    if (maybeUnder13 && !gName) throw new UserError('Learners who may be under 13 (born ' + (thisYear - MAX_YEARS_NEEDING_GUARDIAN) + ' or later) need a parent or guardian name.');
     if (gName.length > 60) throw new UserError('The guardian name is too long (60 characters at most).');
 
     return this._tx(() => {
       let guardian_id = null;
-      if (age < GUARDIAN_UNDER_AGE) {
+      if (maybeUnder13) {
         guardian_id = crypto.randomUUID();
         this.data.guardians[guardian_id] = { id: guardian_id, name: gName, created_at: this._iso() };
       }
@@ -109,6 +117,7 @@ class Engine {
       this.data.attempts = this.data.attempts.filter((a) => a.learner_id !== learner.id);
       for (const k of Object.keys(this.data.mastery)) if (this.data.mastery[k].learner_id === learner.id) delete this.data.mastery[k];
       for (const k of Object.keys(this.data.placements)) if (this.data.placements[k].learner_id === learner.id) delete this.data.placements[k];
+      for (const k of [...this.issued.keys()]) if (k.startsWith(learner.id + '|')) this.issued.delete(k);
       if (learner.guardian_id && !Object.values(this.data.learners).some((l) => l.guardian_id === learner.guardian_id)) delete this.data.guardians[learner.guardian_id];
       return { deleted: true };
     });
@@ -194,7 +203,16 @@ class Engine {
     const last = [...this.data.attempts].reverse().find((a) => a.learner_id === learner_id && a.skill_id === skill.id);
     const template = this._pickTemplate(learner_id, skill.id, last && last.template_id);
     const problem = buildProblem(template.id, this.randomSeed());
+    this._issue(learner_id, problem.template_id, problem.seed);
     return { reason, skill: { id: skill.id, name: skill.name, track: skill.track }, problem: publicProblem(problem) };
+  }
+
+  /** Remember that this exact question was given to this learner. The oldest are forgotten past a cap. */
+  _issue(learnerId, templateId, seed) {
+    const prefix = learnerId + '|';
+    this.issued.set(prefix + templateId + '|' + seed, true);
+    const mine = [...this.issued.keys()].filter((k) => k.startsWith(prefix));
+    for (const k of mine.slice(0, Math.max(0, mine.length - MAX_ISSUED_PER_LEARNER))) this.issued.delete(k);
   }
 
   _grade(problem, response) {
@@ -237,9 +255,11 @@ class Engine {
     if (this._isLocked(learner_id, template.skill_id)) throw new UserError('That skill is still locked.');
     const problem = buildProblem(template_id, seed);
     if (this._alreadyAnswered(learner_id, template_id, seed)) throw new UserError('You already answered this question. Ask for a new one.');
+    const issuedKey = learner_id + '|' + template_id + '|' + problem.seed;
+    if (!this.issued.has(issuedKey)) throw new UserError('That question was not given to you (or the app was restarted). Ask for a new one.');
     const graded = this._grade(problem, response);
 
-    return this._tx(() => {
+    const result = this._tx(() => {
       const attempt = this._recordAttempt(learner_id, problem, response, graded, { time_ms, hints_used });
       const before = this._mastery(learner_id, problem.skill_id) || newMastery(learner_id, problem.skill_id);
       const after = updateMastery(before, { is_correct: graded.is_correct, hints_used: attempt.hints_used }, this.now());
@@ -258,6 +278,8 @@ class Engine {
         unlocked_skills: unlocked,
       };
     });
+    this.issued.delete(issuedKey);
+    return result;
   }
 
   // ── Placement ──────────────────────────────────────────────────────────────
