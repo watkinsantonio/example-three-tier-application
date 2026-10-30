@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { allocate, formatKg, parseKg, parseRegions, summarize } from './logic';
+import { FIND_HELP_RESOURCES, GIVE_RESOURCES, OPEN_SOURCE_TOOLS, type Resource } from './resources';
 
 export const metadata: Metadata = {
   title: 'Food Distribution Planner',
@@ -126,7 +127,44 @@ export default async function ImpactPage({ searchParams }: { searchParams: Searc
             </ul>
           </section>
         )}
+
+        <section aria-label="Find help or give" className="mt-12 space-y-6">
+          <p className="text-sm text-zinc-600 dark:text-zinc-400">
+            This planner only divides the food you enter. It does not deliver food or money. These links
+            point to organisations that do.
+          </p>
+          <ResourceList title="Find local food help" items={FIND_HELP_RESOURCES} />
+          <ResourceList title="Give to evidence-based relief" items={GIVE_RESOURCES} />
+          <ResourceList title="Open-source tools to look at" items={OPEN_SOURCE_TOOLS} />
+          <p className="text-xs text-zinc-500 dark:text-zinc-400">
+            Links were not re-checked from the build environment; confirm each site before you rely on it.
+          </p>
+        </section>
       </div>
     </main>
   );
 }
+
+function ResourceList({ title, items }: { title: string; items: Resource[] }) {
+  return (
+    <div>
+      <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50 mb-2">{title}</h2>
+      <ul className="space-y-2">
+        {items.map((item) => (
+          <li key={item.url} className="text-sm">
+            <a
+              href={item.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-medium text-zinc-900 dark:text-zinc-50 hover:underline"
+            >
+              {item.name}
+            </a>
+            <span className="text-zinc-600 dark:text-zinc-400"> — {item.purpose}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
