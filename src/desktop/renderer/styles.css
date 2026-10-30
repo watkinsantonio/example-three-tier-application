@@ -1,0 +1,50 @@
+:root {
+  --bg: #f6f7fb;
+  --card: #fff;
+  --ink: #1d2433;
+  --muted: #5d667a;
+  --accent: #3b5bdb;
+  --good: #2b8a3e;
+  --bad: #c92a2a;
+  --line: #dde1ec;
+}
+* { box-sizing: border-box; }
+body { margin: 0; font: 18px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; background: var(--bg); color: var(--ink); }
+.topbar { display: flex; justify-content: space-between; padding: 12px 24px; background: var(--accent); color: #fff; }
+.brand { font-weight: 700; font-size: 1.1rem; }
+main { max-width: 760px; margin: 24px auto; padding: 0 16px; }
+.card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 20px 24px; margin-bottom: 16px; }
+h1 { font-size: 1.6rem; margin: 0 0 12px; }
+h2 { font-size: 1.2rem; margin: 0 0 8px; }
+.muted { color: var(--muted); font-size: 0.9rem; }
+button { font: inherit; padding: 8px 16px; border-radius: 8px; border: 1px solid var(--accent); background: var(--accent); color: #fff; cursor: pointer; margin: 4px 8px 4px 0; }
+button.secondary { background: #fff; color: var(--accent); }
+button:disabled { opacity: 0.5; cursor: not-allowed; }
+button:focus-visible, input:focus-visible { outline: 3px solid #ffb300; outline-offset: 2px; }
+input[type="text"], input[type="number"] { font: inherit; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; }
+label { display: block; margin: 10px 0 4px; font-weight: 600; }
+.prompt { font-size: 1.5rem; margin: 12px 0 16px; }
+.choices label { display: block; font-weight: 400; padding: 8px 12px; border: 1px solid var(--line); border-radius: 8px; margin: 6px 0; cursor: pointer; }
+.fraction { display: inline-flex; flex-direction: column; align-items: center; gap: 4px; }
+.fraction input { width: 5em; text-align: center; }
+.fraction hr { width: 100%; margin: 0; border: 0; border-top: 3px solid var(--ink); }
+.order { list-style: none; padding: 0; margin: 0; }
+.order li { display: flex; align-items: center; gap: 8px; padding: 6px 12px; border: 1px solid var(--line); border-radius: 8px; margin: 6px 0; background: #fafbff; }
+.order li span { flex: 1; font-size: 1.2rem; }
+.order button { padding: 2px 10px; margin: 0; }
+.feedback { border-left: 6px solid var(--line); }
+.feedback.good { border-color: var(--good); }
+.feedback.bad { border-color: var(--bad); }
+.error { color: var(--bad); font-weight: 600; margin: 8px 0; }
+.hint { background: #fff8e1; border-radius: 8px; padding: 6px 12px; margin: 6px 0; }
+.bar { background: var(--line); border-radius: 6px; height: 10px; overflow: hidden; }
+.bar > div { background: var(--accent); height: 100%; }
+.skill { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 10px 0; border-top: 1px solid var(--line); }
+.skill .info { flex: 1; }
+.badge { font-size: 0.8rem; padding: 2px 8px; border-radius: 10px; background: var(--line); }
+.badge.mastered { background: #d3f9d8; color: var(--good); }
+.badge.learning { background: #dbe4ff; color: var(--accent); }
+.badge.review { background: #fff3bf; color: #8a6d00; }
+
+#delete-box { margin-top: 16px; }
+button.danger-button { background: var(--bad); color: #fff; border-color: var(--bad); }

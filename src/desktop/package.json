@@ -1,0 +1,49 @@
+{
+  "name": "mathpath",
+  "version": "0.1.0",
+  "description": "MathPath: an offline desktop app that helps people learn maths, one skill at a time.",
+  "private": true,
+  "license": "MIT",
+  "main": "electron/main.js",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "test": "node --test",
+    "start": "electron .",
+    "smoke": "electron . --smoke",
+    "dist": "electron-builder --publish never",
+    "pack": "electron-builder --dir --publish never"
+  },
+  "build": {
+    "appId": "io.github.mathpath.desktop",
+    "productName": "MathPath",
+    "files": [
+      "electron/**",
+      "renderer/**",
+      "core/**",
+      "package.json"
+    ],
+    "directories": {
+      "output": "dist"
+    },
+    "mac": {
+      "category": "public.app-category.education",
+      "target": "dmg"
+    },
+    "win": {
+      "target": "nsis"
+    },
+    "linux": {
+      "target": "AppImage",
+      "category": "Education",
+      "maintainer": "MathPath",
+      "synopsis": "Learn maths offline"
+    }
+  },
+  "devDependencies": {
+    "electron": "45.1.0",
+    "electron-builder": "26.18.0",
+    "jsdom": "^30.1.3"
+  }
+}
