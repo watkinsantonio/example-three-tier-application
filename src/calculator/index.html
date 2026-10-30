@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Calculator</title>
+  <style>
+    body { font-family: system-ui, sans-serif; background: #f4f4f5; display: grid; place-items: center; min-height: 100vh; margin: 0; }
+    main { width: min(22rem, 94vw); background: #fff; border: 1px solid #d4d4d8; border-radius: .75rem; padding: 1rem; }
+    #expr { width: 100%; box-sizing: border-box; font-size: 1.5rem; text-align: right; padding: .5rem; border: 1px solid #d4d4d8; border-radius: .5rem; }
+    #result { min-height: 2rem; text-align: right; font-size: 1.1rem; color: #52525b; margin: .5rem 0 1rem; }
+    #result.error { color: #b91c1c; }
+    .keys { display: grid; grid-template-columns: repeat(4, 1fr); gap: .5rem; }
+    button { font-size: 1.2rem; padding: .8rem 0; border: 1px solid #d4d4d8; border-radius: .5rem; background: #fafafa; cursor: pointer; }
+    button:hover { background: #e4e4e7; }
+    button.op { background: #18181b; color: #fff; }
+    button.op:hover { background: #3f3f46; }
+  </style>
+</head>
+<body>
+  <main>
+    <input id="expr" type="text" inputmode="decimal" autocomplete="off" aria-label="Expression" autofocus>
+    <div id="result" role="status" aria-live="polite">0</div>
+    <div class="keys" id="keys"></div>
+  </main>
+  <script src="calc.js"></script>
+  <script src="ui.js"></script>
+</body>
+</html>
