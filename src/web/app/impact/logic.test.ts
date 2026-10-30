@@ -146,6 +146,26 @@ test('coverage never shows 100% for a real shortfall, even just below need', () 
   assert.equal(summarize(1_000_000_000 - 1, result).status, 'short');
 });
 
+test('coverage does not floor down when float error lands just below an integer', () => {
+  // 0.29 / 1 * 100 is 28.999999999999996 in floating point; the true value is 29.
+  assert.equal(coverage(0.29, 1), 29);
+  assert.equal(coverage(0.57, 1), 57);
+  assert.equal(coverage(0.58, 1), 58);
+});
+
+test('summarize status follows per-region coverage, not snapped totals', () => {
+  // Total shortfall is 0.5 kg, within float tolerance at 1e12 scale, but region B
+  // is really short (99%). The status must not claim an exact match.
+  const allocations = [
+    { name: 'A', needKg: 1_000_000_000_000, allocatedKg: 1_000_000_000_000, coveragePercent: 100 },
+    { name: 'B', needKg: 1_000_000, allocatedKg: 1_000_000 - 0.5, coveragePercent: 99 },
+  ];
+  const supply = 1_000_000_000_000 + 1_000_000 - 0.5;
+  const summary = summarize(supply, allocations);
+  assert.equal(summary.status, 'short');
+  assert.equal(summary.unmet, 0.5);
+});
+
 test('formatKg groups thousands and keeps one decimal', () => {
   assert.equal(formatKg(1200), '1,200 kg');
   assert.equal(formatKg(12.25), '12.3 kg');

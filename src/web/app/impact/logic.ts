@@ -28,6 +28,8 @@ export const MAX_REGIONS_TEXT_LENGTH = 5000;
  * so the tolerance scales with the amounts being compared.
  */
 const KG_RELATIVE_EPSILON = 1e-12;
+/** Added before flooring a percentage so float error cannot drop it just below an integer. */
+const PERCENT_NUDGE = 1e-9;
 /** Longest accepted text for one kg amount, checked before parsing. */
 const MAX_KG_TEXT_LENGTH = 20;
 
@@ -126,12 +128,16 @@ export function leftoverKg(supplyKg: number, allocations: Allocation[]): number 
   return Math.max(0, supplyKg - allocated);
 }
 
-/** Need that could not be covered: total need minus total allocated, snapped to 0 within float noise. */
+/**
+ * Need that could not be covered, summed per region. A region whose allocation
+ * matches its need within float noise contributes nothing, so this agrees with
+ * each region's coverage.
+ */
 export function unmetKg(allocations: Allocation[]): number {
-  const need = allocations.reduce((sum, a) => sum + a.needKg, 0);
-  const allocated = allocations.reduce((sum, a) => sum + a.allocatedKg, 0);
-  if (kgNear(need, allocated)) return 0;
-  return Math.max(0, need - allocated);
+  return allocations.reduce((sum, a) => {
+    if (kgNear(a.needKg, a.allocatedKg) || a.allocatedKg >= a.needKg) return sum;
+    return sum + (a.needKg - a.allocatedKg);
+  }, 0);
 }
 
 /**
@@ -142,7 +148,9 @@ export function unmetKg(allocations: Allocation[]): number {
 export function coverage(allocatedKg: number, needKg: number): number {
   if (needKg <= 0) return 100;
   if (allocatedKg >= needKg || kgNear(allocatedKg, needKg)) return 100;
-  return Math.min(99, Math.floor((allocatedKg / needKg) * 100));
+  // The nudge absorbs float error such as 0.29 / 1 * 100 = 28.999999999999996.
+  // The cap keeps a real shortfall from reading 100 after the nudge.
+  return Math.min(99, Math.floor((allocatedKg / needKg) * 100 + PERCENT_NUDGE));
 }
 
 export interface PlanSummary {
@@ -158,8 +166,10 @@ export interface PlanSummary {
 export function summarize(supplyKg: number, allocations: Allocation[]): PlanSummary {
   const leftover = leftoverKg(supplyKg, allocations);
   const unmet = unmetKg(allocations);
+  // Status follows the per-region coverage the page shows, so it cannot say "exact" while a region is short.
+  const anyRegionShort = allocations.some((a) => a.coveragePercent < 100);
   let status: PlanSummary['status'] = 'exact';
-  if (unmet > 0) status = 'short';
+  if (anyRegionShort) status = 'short';
   else if (leftover > 0) status = 'surplus';
   return {
     totalSupplied: allocations.reduce((sum, a) => sum + a.allocatedKg, 0),

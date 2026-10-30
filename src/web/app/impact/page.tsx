@@ -137,7 +137,8 @@ export default async function ImpactPage({ searchParams }: { searchParams: Searc
           <ResourceList title="Give to evidence-based relief" items={GIVE_RESOURCES} />
           <ResourceList title="Open-source tools to look at" items={OPEN_SOURCE_TOOLS} />
           <p className="text-xs text-zinc-500 dark:text-zinc-400">
-            Links were not re-checked from the build environment; confirm each site before you rely on it.
+            The GitHub projects were checked against the GitHub API. The organisation sites could not be opened
+            from the build environment, so confirm each of those before you rely on it.
           </p>
         </section>
       </div>
