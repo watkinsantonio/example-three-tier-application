@@ -38,13 +38,14 @@ choices, hints) and sends back a response; grading happens in the main process.
 
 ## Run it
 
-Needs Node 22.14 or newer.
+Needs Node `^22.22.2`, `^24.15.0` or `26+` (the range jsdom 30 supports; `engines` in
+`package.json` says the same).
 
 ```bash
 cd src/desktop
-npm ci
-npm test            # unit, engine, shell and UI tests (no Electron needed)
-npm start           # open the app (downloads Electron the first time)
+npm ci              # installs the pinned Electron and electron-builder (Electron downloads its app binary here)
+npm test            # unit, engine, shell and UI tests (no Electron binary needed)
+npm start           # open the app
 npm run smoke       # launch Electron headlessly, load the UI and exit 0/1
 ```
 
@@ -55,11 +56,22 @@ npm run dist        # installer for the current OS in dist/ (NSIS, dmg or AppIma
 npm run pack        # unpacked app folder only, faster
 ```
 
-Build on the OS you are targeting. `npm start`, `npm run smoke`, `npm run dist` and
-`npm run pack` fetch Electron / electron-builder from npm, so they need network access
-once. They were not run in the development sandbox, which has no display, so run
+Build on the OS you are targeting. `electron` and `electron-builder` are pinned
+devDependencies (see `package-lock.json`), so builds are reproducible; they need network
+access once, to download the Electron binary and installer tooling. That download is
+blocked in the development sandbox, which also has no display, so `npm start`,
+`npm run smoke`, `npm run dist` and `npm run pack` have **not been run**. Run
 `npm run smoke` and `npm run dist` on a real machine before relying on the packaging
 settings in `package.json` (an app icon and author/homepage are not set yet).
+
+## Design notes
+
+- **Mastery is sticky.** Once a skill is mastered it stays mastered. A wrong answer later
+  lowers `p_mastery`, resets the streak and schedules a review in 10 minutes
+  (`review_due`), but never re-locks skills that depend on it.
+- **Storage is simple, not scalable.** Every change rewrites the whole JSON file. This is
+  fine for a household's use; move to an append-only log or SQLite if one profile ever
+  holds many thousands of attempts.
 
 ## Where data lives
 

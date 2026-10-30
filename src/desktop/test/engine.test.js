@@ -240,6 +240,41 @@ test('persistence: data survives a restart; corrupt and newer files are handled'
   const newer = path.join(dir, 'newer.json');
   fs.writeFileSync(newer, JSON.stringify({ version: 99, learners: {}, attempts: [], mastery: {} }));
   assert.throws(() => new Store(newer), /newer version/);
+  assert.ok(fs.existsSync(newer), 'the newer file is left in place');
+
+  // A future file that renamed the keys we check must still be refused, not moved aside as "corrupt".
+  const reshaped = path.join(dir, 'reshaped.json');
+  fs.writeFileSync(reshaped, JSON.stringify({ version: 2, people: {}, history: [] }));
+  assert.throws(() => new Store(reshaped), /newer version/);
+  assert.ok(fs.existsSync(reshaped));
+  assert.deepEqual(fs.readdirSync(dir).filter((f) => f.includes('corrupt')).length, 1, 'only the genuinely unreadable file was moved aside');
+});
+
+test('a wrong answer on a mastered skill does not re-lock the skills that depend on it', () => {
+  const { engine, clock } = setup();
+  const l = adult(engine);
+  practiceCorrect(engine, l, '2.num.order', 12);
+  practiceCorrect(engine, l, '3.add.regroup', 12);
+  const status = (id) => engine.getProgress({ learner_id: l.id }).skills.find((s) => s.skill_id === id).status;
+  assert.equal(status('3.mult.facts'), 'learning');
+  practiceCorrect(engine, l, '3.mult.facts', 2); // started working on a dependent skill
+
+  // Fail a review question on the prerequisite.
+  clock.t += 40 * 24 * 3600 * 1000;
+  const { problem } = engine.nextProblem({ learner_id: l.id, skill_id: '2.num.order' });
+  const res = engine.submitAnswer({ learner_id: l.id, template_id: problem.template_id, seed: problem.seed, response: problem.type === 'drag' ? [...problem.items].sort().reverse() : '987654' });
+  assert.equal(res.is_correct, false);
+  assert.equal(res.mastery.status, 'mastered');
+  assert.equal(res.newly_mastered, false);
+  assert.equal(status('2.num.order'), 'mastered');
+  assert.equal(status('3.add.regroup'), 'mastered');
+  assert.equal(engine.getProgress({ learner_id: l.id }).skills[0].review_due, false, 'next review is a short while away, set by the clock');
+  clock.t += 11 * 60 * 1000;
+  assert.equal(engine.getProgress({ learner_id: l.id }).skills[0].review_due, true, 're-practice is scheduled instead');
+
+  // Dependent skills stay open: can still ask and submit.
+  const dep = engine.nextProblem({ learner_id: l.id, skill_id: '3.mult.facts' });
+  assert.equal(engine.submitAnswer({ learner_id: l.id, template_id: dep.problem.template_id, seed: dep.problem.seed, response: answerOf(dep.problem) }).is_correct, true);
 });
 
 test('api exposes exactly the declared methods', () => {

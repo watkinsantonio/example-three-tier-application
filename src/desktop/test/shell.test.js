@@ -147,8 +147,16 @@ test('index.html: strict content security policy, no inline script, local assets
 
 test('package.json: declares the entry point, Node engine and packaging files', () => {
   const pkg = require('../package.json');
+  const lock = require('../package-lock.json');
   assert.equal(pkg.main, 'electron/main.js');
   assert.ok(fs.existsSync(path.join(root, pkg.main)));
-  assert.match(pkg.engines.node, />=22/);
+  // Must allow the locked jsdom's minimum Node.
+  assert.equal(pkg.engines.node, lock.packages['node_modules/jsdom'].engines.node);
   for (const dir of ['electron', 'renderer', 'core']) assert.ok(pkg.build.files.some((f) => f.startsWith(dir + '/')));
+  // Electron and the packager are pinned dev dependencies, not fetched with npx at run time.
+  for (const name of ['electron', 'electron-builder']) {
+    assert.match(pkg.devDependencies[name], /^\d+\.\d+\.\d+$/, name + ' is pinned exactly');
+    assert.equal(lock.packages['node_modules/' + name].version, pkg.devDependencies[name]);
+  }
+  for (const script of ['start', 'smoke', 'dist', 'pack']) assert.ok(!/npx/.test(pkg.scripts[script]), script);
 });

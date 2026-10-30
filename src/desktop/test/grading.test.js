@@ -95,7 +95,7 @@ test('mastery: correct answers raise it, wrong ones lower it, mastered needs a s
   const wrong = updateMastery(m, { is_correct: false }, t0);
   assert.ok(wrong.p_mastery < m.p_mastery);
   assert.equal(wrong.streak, 0);
-  assert.equal(wrong.status, 'learning');
+  assert.equal(wrong.status, 'mastered', 'mastery is sticky: a slip does not demote the skill');
   assert.ok(Date.parse(wrong.next_review_at) - t0 < 60 * 60 * 1000, 'wrong answer is reviewed soon');
 });
 

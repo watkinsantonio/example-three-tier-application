@@ -26,7 +26,10 @@ function updateMastery(prev, { is_correct, hints_used = 0 }, nowMs) {
     : (p * BKT.p_slip) / (p * BKT.p_slip + (1 - p) * (1 - guess));
   const p_mastery = Math.min(0.999, posterior + (1 - posterior) * BKT.p_learn);
   const streak = is_correct ? prev.streak + 1 : 0;
-  const status = p_mastery >= MASTERED_P && streak >= MASTERED_STREAK ? 'mastered' : 'learning';
+  // Mastery is sticky: once earned it is kept, so a slip on a review question never
+  // re-locks the skills that depend on it. A wrong answer lowers p_mastery and
+  // schedules a quick review instead (see REVIEW_GAPS[0]).
+  const status = prev.status === 'mastered' || (p_mastery >= MASTERED_P && streak >= MASTERED_STREAK) ? 'mastered' : 'learning';
   const gap = REVIEW_GAPS[Math.min(streak, REVIEW_GAPS.length - 1)];
   return {
     ...prev,

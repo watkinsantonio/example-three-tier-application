@@ -41,7 +41,12 @@ class Engine {
     return this.store.data;
   }
 
-  /** Run a change; if saving fails, roll the in-memory data back so memory and disk agree. */
+  /**
+   * Run a change; if saving fails, roll the in-memory data back so memory and disk agree.
+   * Known limit: this snapshots and rewrites the whole database on every change, so cost
+   * grows with the number of attempts. Fine for one family's use; an append-only log
+   * would be the next step if a profile ever holds many thousands of attempts.
+   */
   _tx(fn) {
     const snapshot = JSON.parse(JSON.stringify(this.store.data));
     try {

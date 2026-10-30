@@ -34,15 +34,16 @@ class Store {
     } catch {
       parsed = null;
     }
+    // Check the version first: a newer file may have a different shape and must be refused, not moved aside.
+    if (parsed && typeof parsed === 'object' && Number.isInteger(parsed.version) && parsed.version > VERSION) {
+      throw new Error('This data was saved by a newer version of MathPath (data version ' + parsed.version + '). Please update the app.');
+    }
     const valid = parsed && typeof parsed === 'object' && Number.isInteger(parsed.version) && parsed.learners && parsed.attempts && parsed.mastery;
     if (!valid) {
       // Keep the unreadable file for recovery instead of overwriting it.
       this.recoveredFrom = this.filePath + '.corrupt-' + Date.now();
       fs.renameSync(this.filePath, this.recoveredFrom);
       return;
-    }
-    if (parsed.version > VERSION) {
-      throw new Error('This data was saved by a newer version of MathPath (data version ' + parsed.version + '). Please update the app.');
     }
     this.data = { ...emptyData(), ...parsed };
   }

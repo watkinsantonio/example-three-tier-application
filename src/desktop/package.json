@@ -6,19 +6,18 @@
   "license": "MIT",
   "main": "electron/main.js",
   "engines": {
-    "node": ">=22.14"
+    "node": "^22.22.2 || ^24.15.0 || >=26.0.0"
   },
   "scripts": {
     "test": "node --test",
-    "start": "npx --yes electron@45.1.0 .",
-    "smoke": "npx --yes electron@45.1.0 . --smoke",
-    "dist": "npx --yes electron-builder@26.18.0 --publish never",
-    "pack": "npx --yes electron-builder@26.18.0 --dir --publish never"
+    "start": "electron .",
+    "smoke": "electron . --smoke",
+    "dist": "electron-builder --publish never",
+    "pack": "electron-builder --dir --publish never"
   },
   "build": {
     "appId": "io.github.mathpath.desktop",
     "productName": "MathPath",
-    "electronVersion": "45.1.0",
     "files": [
       "electron/**",
       "renderer/**",
@@ -43,6 +42,8 @@
     }
   },
   "devDependencies": {
+    "electron": "45.1.0",
+    "electron-builder": "26.18.0",
     "jsdom": "^30.1.3"
   }
 }
