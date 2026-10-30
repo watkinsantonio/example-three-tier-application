@@ -21,6 +21,9 @@ export default async function Home() {
             <Link href="/checkers" className="text-sm text-zinc-600 dark:text-zinc-400 hover:underline">
               Checkers
             </Link>
+            <Link href="/drinks" className="text-sm text-zinc-600 dark:text-zinc-400 hover:underline">
+              Drinks
+            </Link>
           </nav>
         </div>
 
