@@ -4,14 +4,7 @@
   const input = document.getElementById('expr');
   const result = document.getElementById('result');
   const keys = document.getElementById('keys');
-
-  const layout = [
-    ['C', 'clear'], ['⌫', 'back'], ['(', ')'], ['÷', 'op'],
-    ['7'], ['8'], ['9'], ['×', 'op'],
-    ['4'], ['5'], ['6'], ['−', 'op'],
-    ['1'], ['2'], ['3'], ['+', 'op'],
-    ['0'], ['.'], ['%', 'op'], ['=', 'equals'],
-  ];
+  const { layout, applyKey } = window.Keypad;
 
   function preview() {
     if (input.value.trim() === '') {
@@ -32,16 +25,15 @@
     if (out.ok) input.value = out.text;
   }
 
-  layout.forEach(([label, kind]) => {
+  layout.flat().forEach((key) => {
     const button = document.createElement('button');
     button.type = 'button';
-    button.textContent = label;
-    if (kind === 'op' || kind === 'equals') button.className = 'op';
+    button.textContent = key.label;
+    if (key.kind === 'op' || key.kind === 'equals') button.className = 'op';
+    if (key.span) button.style.gridColumn = `span ${key.span}`;
     button.addEventListener('click', () => {
-      if (kind === 'clear') input.value = '';
-      else if (kind === 'back') input.value = input.value.slice(0, -1);
-      else if (kind === 'equals') return commit();
-      else input.value += label;
+      if (key.kind === 'equals') return commit();
+      input.value = applyKey(input.value, key);
       preview();
       input.focus();
     });
