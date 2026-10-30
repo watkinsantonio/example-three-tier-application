@@ -1,12 +1,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { FIND_HELP_RESOURCES, GIVE_RESOURCES, OPEN_SOURCE_TOOLS, type Resource } from './resources.ts';
+import { OPEN_SOURCE_TOOLS, type Resource } from './resources.ts';
 
-const groups: [string, Resource[]][] = [
-  ['find help', FIND_HELP_RESOURCES],
-  ['give', GIVE_RESOURCES],
-  ['tools', OPEN_SOURCE_TOOLS],
-];
+const groups: [string, Resource[]][] = [['tools', OPEN_SOURCE_TOOLS]];
 
 test('every resource has a name, a plain-language purpose and an https URL', () => {
   for (const [group, items] of groups) {
@@ -25,8 +21,8 @@ test('resource URLs are unique across all groups', () => {
   assert.equal(new Set(urls).size, urls.length);
 });
 
-test('giving links do not point at the planner itself', () => {
-  for (const item of GIVE_RESOURCES) {
-    assert.doesNotMatch(item.url, /localhost|\/impact/);
+test('only GitHub links are listed, since those are the ones checked from the sandbox', () => {
+  for (const item of OPEN_SOURCE_TOOLS) {
+    assert.equal(new URL(item.url).hostname, 'github.com', `${item.name} must be a GitHub link`);
   }
 });

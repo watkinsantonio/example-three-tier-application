@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { allocate, formatKg, parseKg, parseRegions, summarize } from './logic';
-import { FIND_HELP_RESOURCES, GIVE_RESOURCES, OPEN_SOURCE_TOOLS, type Resource } from './resources';
+import { OPEN_SOURCE_TOOLS, type Resource } from './resources';
 
 export const metadata: Metadata = {
   title: 'Food Distribution Planner',
@@ -128,17 +128,14 @@ export default async function ImpactPage({ searchParams }: { searchParams: Searc
           </section>
         )}
 
-        <section aria-label="Find help or give" className="mt-12 space-y-6">
+        <section aria-label="Open-source tools" className="mt-12 space-y-6">
           <p className="text-sm text-zinc-600 dark:text-zinc-400">
-            This planner only divides the food you enter. It does not deliver food or money. These links
-            point to organisations that do.
+            This planner only divides the food you enter. It does not deliver food or money, and it lists no
+            donation or food-help links yet: those could not be opened and checked from the build environment.
           </p>
-          <ResourceList title="Find local food help" items={FIND_HELP_RESOURCES} />
-          <ResourceList title="Give to evidence-based relief" items={GIVE_RESOURCES} />
           <ResourceList title="Open-source tools to look at" items={OPEN_SOURCE_TOOLS} />
           <p className="text-xs text-zinc-500 dark:text-zinc-400">
-            The GitHub projects were checked against the GitHub API. The organisation sites could not be opened
-            from the build environment, so confirm each of those before you rely on it.
+            The GitHub projects were checked against the GitHub API.
           </p>
         </section>
       </div>
