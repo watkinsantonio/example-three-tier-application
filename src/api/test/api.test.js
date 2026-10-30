@@ -115,3 +115,22 @@ test('PATCH /tasks/:id validates input and returns 404 for unknown tasks', async
   res = await request('PATCH', '/tasks/99', { completed: true });
   assert.equal(res.status, 404);
 });
+
+test('DELETE /tasks/:id deletes a task and returns 204', async () => {
+  nextResults = [{ rows: [{ id: 5, title: 'task', completed: false }] }, { rows: [] }];
+  const res = await request('DELETE', '/tasks/5');
+  assert.equal(res.status, 204);
+  assert.equal(calls.length, 2);
+  assert.deepEqual(calls[0].params, [5]); // SELECT
+  assert.deepEqual(calls[1].params, [5]); // DELETE
+});
+
+test('DELETE /tasks/:id returns 404 for unknown tasks', async () => {
+  let res = await request('DELETE', '/tasks/abc');
+  assert.equal(res.status, 404);
+
+  nextResults = [{ rows: [] }];
+  res = await request('DELETE', '/tasks/99');
+  assert.equal(res.status, 404);
+  assert.equal(calls.length, 1);
+});
