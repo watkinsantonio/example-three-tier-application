@@ -22,12 +22,26 @@ export const MAX_REGIONS = 50;
 export const MAX_REGION_NAME_LENGTH = 60;
 /** Upper bound on the raw regions text, checked before any splitting. */
 export const MAX_REGIONS_TEXT_LENGTH = 5000;
-/** Float tolerance for kg arithmetic: amounts within this are treated as equal. */
-const KG_EPSILON = 1e-9;
+/**
+ * Relative float tolerance for kg arithmetic. Amounts within this fraction of
+ * the larger magnitude (and at least this absolute size) are treated as equal,
+ * so the tolerance scales with the amounts being compared.
+ */
+const KG_RELATIVE_EPSILON = 1e-12;
+/** Longest accepted text for one kg amount, checked before parsing. */
+const MAX_KG_TEXT_LENGTH = 20;
+
+/** True when two kg amounts differ only by float noise at their scale. */
+export function kgNear(a: number, b: number): boolean {
+  return Math.abs(a - b) <= KG_RELATIVE_EPSILON * Math.max(1, Math.abs(a), Math.abs(b));
+}
 
 /** Validate a non-negative kilogram amount: plain decimal digits only (no hex, exponents or signs). */
 export function parseKg(input: unknown): { value: number } | { error: string } {
   const text = typeof input === 'string' ? input.trim() : input;
+  if (typeof text === 'string' && text.length > MAX_KG_TEXT_LENGTH) {
+    return { error: 'Enter an amount of 0 kg or more.' };
+  }
   const kg = typeof text === 'string' && /^\d+(\.\d+)?$/.test(text) ? Number(text) : input;
   if (typeof kg !== 'number' || !Number.isFinite(kg) || kg < 0) {
     return { error: 'Enter an amount of 0 kg or more.' };
@@ -93,7 +107,7 @@ export function allocate(supplyKg: number, regions: Region[]): Allocation[] {
     const fairShare = remainingSupply / regionsLeft;
     // Snap to the full need when the share is within float noise of it, so exact matches stay exact.
     const give =
-      region.needKg - fairShare <= KG_EPSILON ? region.needKg : Math.min(region.needKg, fairShare);
+      fairShare >= region.needKg || kgNear(fairShare, region.needKg) ? region.needKg : fairShare;
     allocated[index] = give;
     remainingSupply = Math.max(0, remainingSupply - give);
   });
@@ -108,22 +122,48 @@ export function allocate(supplyKg: number, regions: Region[]): Allocation[] {
 /** Food left unallocated after distribution, snapped to 0 within float noise. Never negative. */
 export function leftoverKg(supplyKg: number, allocations: Allocation[]): number {
   const allocated = allocations.reduce((sum, a) => sum + a.allocatedKg, 0);
-  const diff = Math.max(0, supplyKg - allocated);
-  return diff <= KG_EPSILON ? 0 : diff;
+  if (kgNear(supplyKg, allocated)) return 0;
+  return Math.max(0, supplyKg - allocated);
 }
 
 /** Need that could not be covered: total need minus total allocated, snapped to 0 within float noise. */
 export function unmetKg(allocations: Allocation[]): number {
   const need = allocations.reduce((sum, a) => sum + a.needKg, 0);
   const allocated = allocations.reduce((sum, a) => sum + a.allocatedKg, 0);
-  const diff = Math.max(0, need - allocated);
-  return diff <= KG_EPSILON ? 0 : diff;
+  if (kgNear(need, allocated)) return 0;
+  return Math.max(0, need - allocated);
 }
 
 /** Percentage of `needKg` covered by `allocatedKg`, rounded down, 0-100. */
 export function coverage(allocatedKg: number, needKg: number): number {
   if (needKg <= 0) return 100;
-  return Math.min(100, Math.floor((allocatedKg / needKg) * 100 + KG_EPSILON));
+  // The ratio is scale-free, so a fixed tolerance on the percentage is safe here.
+  return Math.min(100, Math.floor((allocatedKg / needKg) * 100 + 1e-9));
+}
+
+export interface PlanSummary {
+  totalSupplied: number;
+  totalNeed: number;
+  leftover: number;
+  unmet: number;
+  /** "exact" when supply matches need, "surplus" when food is left over, "short" when needs are unmet. */
+  status: 'exact' | 'surplus' | 'short';
+}
+
+/** Totals and the headline status for a finished allocation. */
+export function summarize(supplyKg: number, allocations: Allocation[]): PlanSummary {
+  const leftover = leftoverKg(supplyKg, allocations);
+  const unmet = unmetKg(allocations);
+  let status: PlanSummary['status'] = 'exact';
+  if (unmet > 0) status = 'short';
+  else if (leftover > 0) status = 'surplus';
+  return {
+    totalSupplied: allocations.reduce((sum, a) => sum + a.allocatedKg, 0),
+    totalNeed: allocations.reduce((sum, a) => sum + a.needKg, 0),
+    leftover,
+    unmet,
+    status,
+  };
 }
 
 /** Kilograms with thousands separators and at most one decimal, e.g. "1,200.5 kg". */

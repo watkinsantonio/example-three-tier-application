@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { allocate, coverage, formatKg, leftoverKg, parseKg, parseRegions, unmetKg } from './logic.ts';
+import { allocate, coverage, formatKg, kgNear, leftoverKg, parseKg, parseRegions, summarize, unmetKg } from './logic.ts';
 
 test('parseKg accepts non-negative numbers, including form strings', () => {
   assert.deepEqual(parseKg('250'), { value: 250 });
@@ -140,4 +140,43 @@ test('coverage rounds down and caps at 100', () => {
 test('formatKg groups thousands and keeps one decimal', () => {
   assert.equal(formatKg(1200), '1,200 kg');
   assert.equal(formatKg(12.25), '12.3 kg');
+});
+
+test('exact matches stay exact at billions of kg', () => {
+  const supply = 3_000_000_000.1;
+  const result = allocate(supply, [
+    { name: 'A', needKg: 1_000_000_000.1 },
+    { name: 'B', needKg: 2_000_000_000 },
+  ]);
+  assert.deepEqual(result.map((r) => r.coveragePercent), [100, 100]);
+  assert.equal(leftoverKg(supply, result), 0);
+  assert.equal(unmetKg(result), 0);
+  assert.equal(summarize(supply, result).status, 'exact');
+});
+
+test('kgNear uses a tolerance relative to the amounts', () => {
+  assert.equal(kgNear(0.1 + 0.2, 0.3), true);
+  assert.equal(kgNear(1e9, 1e9 + 1), false);
+  assert.equal(kgNear(1e9, 1e9 + 1e-4), true);
+});
+
+test('summarize reports surplus, shortfall and exact status', () => {
+  const surplus = allocate(1000, [{ name: 'A', needKg: 100 }]);
+  assert.deepEqual(summarize(1000, surplus), {
+    totalSupplied: 100,
+    totalNeed: 100,
+    leftover: 900,
+    unmet: 0,
+    status: 'surplus',
+  });
+  const short = allocate(50, [{ name: 'A', needKg: 100 }]);
+  assert.equal(summarize(50, short).status, 'short');
+  assert.equal(summarize(50, short).unmet, 50);
+  const exact = allocate(100, [{ name: 'A', needKg: 100 }]);
+  assert.equal(summarize(100, exact).status, 'exact');
+});
+
+test('parseKg rejects absurdly long amount text', () => {
+  assert.ok('error' in parseKg('1'.repeat(21)));
+  assert.deepEqual(parseKg('1'.repeat(20)), { value: Number('1'.repeat(20)) });
 });

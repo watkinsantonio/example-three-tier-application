@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { allocate, formatKg, leftoverKg, parseKg, parseRegions, unmetKg } from './logic';
+import { allocate, formatKg, parseKg, parseRegions, summarize } from './logic';
 
 export const metadata: Metadata = {
   title: 'Food Distribution Planner',
@@ -28,10 +28,7 @@ export default async function ImpactPage({ searchParams }: { searchParams: Searc
     }
   }
 
-  const totalSupplied = result ? result.reduce((sum, r) => sum + r.allocatedKg, 0) : 0;
-  const totalNeed = result ? result.reduce((sum, r) => sum + r.needKg, 0) : 0;
-  const leftover = result ? leftoverKg(supplyKg, result) : 0;
-  const unmet = result ? unmetKg(result) : 0;
+  const summary = result ? summarize(supplyKg, result) : null;
 
   return (
     <main className="min-h-screen bg-zinc-50 dark:bg-zinc-900 py-16 px-4">
@@ -55,9 +52,11 @@ export default async function ImpactPage({ searchParams }: { searchParams: Searc
             </span>
             <input
               name="supply"
-              type="number"
-              min="0"
-              step="any"
+              type="text"
+              inputMode="decimal"
+              pattern="\d+(\.\d+)?"
+              title="Plain number of kg, e.g. 2500 or 2500.5"
+              autoComplete="off"
               required
               defaultValue={supply}
               className="w-full rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 px-4 py-2 text-zinc-900 dark:text-zinc-50 focus:outline-none focus:ring-2 focus:ring-zinc-500"
@@ -89,21 +88,21 @@ export default async function ImpactPage({ searchParams }: { searchParams: Searc
           </p>
         )}
 
-        {result && (
+        {result && summary && (
           <section aria-label="Distribution plan">
             <p className="text-sm text-zinc-600 dark:text-zinc-400 mb-4">
-              Distributing {formatKg(totalSupplied)} of {formatKg(totalNeed)} total need.
+              Distributing {formatKg(summary.totalSupplied)} of {formatKg(summary.totalNeed)} total need.
             </p>
             <p className="text-sm mb-4" role="status">
-              {leftover > 0 && (
-                <span className="text-zinc-700 dark:text-zinc-300">{formatKg(leftover)} left over after every need is met.</span>
+              {summary.status === 'surplus' && (
+                <span className="text-zinc-700 dark:text-zinc-300">{formatKg(summary.leftover)} left over after every need is met.</span>
               )}
-              {unmet > 0 && (
+              {summary.status === 'short' && (
                 <span className="text-amber-600 dark:text-amber-400">
-                  Short by {formatKg(unmet)}: supply does not cover all needs.
+                  Short by {formatKg(summary.unmet)}: supply does not cover all needs.
                 </span>
               )}
-              {leftover === 0 && unmet === 0 && (
+              {summary.status === 'exact' && (
                 <span className="text-zinc-700 dark:text-zinc-300">Supply matches need exactly.</span>
               )}
             </p>
